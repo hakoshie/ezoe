@@ -1,4 +1,4 @@
-//  68% ヘルパー関数
+//  70% vectorのその他のコンストラクタ
 /*
 window.addEventListener("scroll", () => {
   const scrollTop = window.scrollY;
@@ -116,6 +116,15 @@ class vector{
             {
                 
                 resize(size,value);}
+                template<typename InputIterator>
+        vector(InputIterator first, InputIterator last, const Allocator & alloc= Allocator())
+            :vector(alloc)
+        {
+            reserve(std::distance(first,last));
+            for(auto i=first; i!=last; ++i){
+                push_back(*i);
+            }
+        }
         void construct(pointer ptr){
             traits::construct(alloc,ptr);
         }
@@ -196,6 +205,23 @@ class vector{
             construct(last,value);
             ++last;
         }
+        void shrink_to_fit(){
+            if(size()==capacity())
+                return ;
+            auto ptr=allocate(size());
+
+            auto current_size=size();
+            for(auto raw_ptr=ptr,iter=begin(),iter_end=end();
+                iter!=iter_end; ++iter,++raw_ptr){
+                    construct(raw_ptr,*iter);
+                }
+            clear();
+            deallocate();
+            first=ptr;
+            last=ptr+current_size;
+            reserved_last=last;
+        }
+
     private:
         using traits = std::allocator_traits<allocator_type> ;
         pointer allocate(size_type n){
@@ -241,10 +267,9 @@ class vector{
 // };
 
 int main() {
-    vector<int>inputs;
-    std::copy(
-        std::istream_iterator<int>(std::cin),
-        std::istream_iterator<int>(),
-        std::back_inserter(inputs)
-    );
+    std::array<int,5>a{1,2,3,4,5};
+    vector<int>v(std::begin(a),std::end(a));
+    for(auto x:v){
+        std::cout<<x<<std::endl;
+    }
 }
