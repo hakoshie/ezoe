@@ -186,9 +186,15 @@ class vector{
         }
         void push_back(const_reference value){
             if(size()+1>capacity()){
-                reserve(size()+1);
+                auto c=size();
+                if(c==0)
+                    c=1;
+                else
+                    c*=2;
+                reserve(c);
             }
             construct(last,value);
+            ++last;
         }
     private:
         using traits = std::allocator_traits<allocator_type> ;
@@ -235,7 +241,10 @@ class vector{
 // };
 
 int main() {
-    std::vector<int>v;
-    v.push_back(1);
-    v.push_back(2);
+    vector<int>inputs;
+    std::copy(
+        std::istream_iterator<int>(std::cin),
+        std::istream_iterator<int>(),
+        std::back_inserter(inputs)
+    );
 }
