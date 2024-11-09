@@ -1,4 +1,4 @@
-//  70% vectorのその他のコンストラクタ
+//  73% rvalueリファレンス
 /*
 window.addEventListener("scroll", () => {
   const scrollTop = window.scrollY;
@@ -22,9 +22,9 @@ class vector{
         using const_reverse_iterator=std::reverse_iterator<const_iterator>;
         using size_type=std::size_t;
     private:
-        pointer first;
-        pointer last;
-        pointer reserved_last;
+        pointer first=nullptr;
+        pointer last=nullptr;
+        pointer reserved_last=nullptr;
         allocator_type alloc;
     public:
         iterator begin() noexcept{
@@ -125,6 +125,9 @@ class vector{
                 push_back(*i);
             }
         }
+        vector(std::initializer_list<value_type> init, const Allocator &alloc =Allocator())
+            :vector(std::begin(init),std::end(init),alloc)
+        {}
         void construct(pointer ptr){
             traits::construct(alloc,ptr);
         }
@@ -221,6 +224,46 @@ class vector{
             last=ptr+current_size;
             reserved_last=last;
         }
+        vector(const vector & r)
+            :alloc(traits::select_on_container_copy_construction(r.alloc)){
+                reserve(r.size());
+                
+                for(auto dest=first, src=r.begin(),last=r.end();
+                src!=last; ++dest,++src){
+                    construct(dest,*src);
+                }
+                last=first+r.size();
+            }
+        vector & operator=(const vector & r){
+            if(this == &r){
+                return *this;
+            }
+            if(size()==r.size()){
+                std::copy(r.begin(),r.end(),begin());
+
+            }
+            else if(capacity()>=r.size()){
+                std::copy(r.begin(),r.end(),begin());
+                for(auto src_iter=r.begin()+r.size(),src_end=r.end();
+                    src_iter!=src_end;src_iter++,++last)
+                    {
+                        construct(last,*src_iter);
+                    }
+            }else{
+                destroy_all();
+                reserve(r.size());
+                for(auto src_iter=r.begin(),src_end=r.end(),dest_iter=begin();
+                    src_iter!=src_end; ++src_iter,++dest_iter,++last)
+                    {
+                        construct(dest_iter,*src_iter);
+                    }
+
+            }
+            return *this;
+        }
+        // vector(const vector & r)
+        //     :first(r.first),last(r.last),reserved_last(r.reserved_last),alloc(r.alloc)
+        // {}
 
     private:
         using traits = std::allocator_traits<allocator_type> ;
@@ -239,37 +282,75 @@ class vector{
                 destroy(&*riter);
             }
         }
+        void destroy_all(){
+            destroy_until(rend());
+        }
 };
-// struct Foo{
-//     void f(){
-//         std::cout<<"non-const"<<std::endl;
-//     }
-//     void f() const {
-//         std::cout<<"const"<<std::endl;
-//     }
-// };
-// struct vector{
-//     private:
-//         void helper_function();
-//     public:
-//         void func(){
-//             helper_function();
-//         }
-// }
-// template<typename Allocator>
-// void f(Allocator & alloc){
-//     std::allocator_traits<Allocator>::allocate(alloc,1);
-// }
-// struct X{
-//     ~X(){
-//         std::cout<<"destructed.\n";
-//     }
-// };
-
-int main() {
-    std::array<int,5>a{1,2,3,4,5};
-    vector<int>v(std::begin(a),std::end(a));
-    for(auto x:v){
-        std::cout<<x<<std::endl;
+struct Point{
+    int x,y,z;
+    Point() : x(0), y(0), z(0) {}
+    Point(int x, int y, int z) : x(x), y(y), z(z) {}
+    Point(const Point & r)
+        :x(r.x),y(r.y),z(r.z)
+    {}
+    Point & operator=(const Point & r){
+        x=r.x;
+        y=r.y;
+        z=r.z;
+        return *this;
     }
+};
+template<typename T>
+class dynamic_array{
+    private:
+        T* first;
+        T * last;
+    public:
+        dynamic_array(std::size_t size=0)
+            :first(new T[size]),last(first +size)
+            {}
+        ~dynamic_array()
+        {
+            delete [] first;
+        }
+        T &operator [](std::size_t i) const noexcept{
+            return first[i];
+        }
+        std::size_t size() const noexcept{
+            return last- first;
+        }
+        T * begin() const noexcept{
+            return first;
+        }
+        T * end() const noexcept{
+            return last;
+        }
+        
+        dynamic_array(dynamic_array &r)
+            :first(new T[r.size()]),last (first + r.size())
+            {
+                r.first=nullptr;
+                r.last=nullptr;
+            }
+        dynamic_array & operator =(const dynamic_array & r){
+            if(this !=&r && size()!=r.size()){
+                delete  first;
+                first = new T[r.size()];
+                last= first + r.size();
+                std::copy(r.begin(),r.end(),begin());
+            }
+        }
+
+};
+struct X{
+    int x;
+    int y;
+    int z;
+
+};
+int main() {
+    dynamic_array<int>source(10);
+    dynamic_array<int>destination=source;
+    // source[0]=1;
 }
+
